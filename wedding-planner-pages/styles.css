@@ -378,79 +378,11 @@ main {
   align-items: stretch;
 }
 
-.memory-hero {
-  position: relative;
-  min-height: 280px;
-  display: grid;
-  grid-template-columns: minmax(280px, 0.72fr) minmax(260px, 0.52fr) minmax(220px, 0.42fr);
-  gap: clamp(16px, 2vw, 28px);
-  align-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 72% 18%, rgba(238, 201, 85, 0.22), transparent 34%),
-    linear-gradient(135deg, rgba(255, 250, 244, 0.96), rgba(242, 230, 216, 0.9));
-  padding: clamp(14px, 2vw, 22px);
-  box-shadow: 0 20px 56px rgba(72, 58, 45, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.48);
-}
-
-.memory-photo {
-  min-width: 0;
-  height: 100%;
-  min-height: 238px;
-  overflow: hidden;
-  border-radius: 28px;
-  background: var(--surface-quiet);
-  box-shadow: 0 18px 42px rgba(72, 58, 45, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.42);
-}
-
-.memory-photo img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  object-position: center 46%;
-  filter: saturate(0.94) contrast(0.96);
-}
-
-.memory-copy {
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-  align-content: center;
-  padding: 4px 0;
-}
-
-.memory-copy h3 {
-  max-width: 440px;
-  margin: 0;
-  font-family: Georgia, "Songti SC", serif;
-  font-size: clamp(28px, 3.2vw, 48px);
-  line-height: 1.08;
-}
-
-.memory-copy p:last-child {
-  max-width: 420px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-.memory-illustration {
-  width: min(260px, 100%);
-  justify-self: center;
-  align-self: end;
-  filter: drop-shadow(0 18px 24px rgba(72, 58, 45, 0.16));
-}
-
 .mesh-card {
   position: relative;
-  min-height: 390px;
+  min-height: 560px;
   display: grid;
-  grid-template-columns: minmax(220px, 0.72fr) minmax(560px, 1.28fr);
-  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(360px, 0.92fr) minmax(520px, 1.08fr);
   gap: 18px clamp(24px, 4vw, 54px);
   align-items: stretch;
   isolation: isolate;
@@ -480,10 +412,77 @@ main {
 }
 
 .mesh-card h3 {
-  max-width: 220px;
+  max-width: 430px;
   margin: 0;
-  font-size: 20px;
-  line-height: 1.25;
+  font-size: clamp(30px, 3vw, 48px);
+  line-height: 1.08;
+}
+
+.overview-story {
+  min-width: 0;
+  min-height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 30px;
+  background: rgba(255, 250, 244, 0.46);
+  box-shadow: 0 24px 58px rgba(72, 58, 45, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.story-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.story-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(34, 30, 25, 0.02), rgba(34, 30, 25, 0.46)),
+    radial-gradient(circle at 78% 12%, rgba(255, 250, 244, 0.62), transparent 32%);
+}
+
+.story-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 48%;
+  filter: saturate(0.94) contrast(0.96);
+}
+
+.story-copy {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 24px;
+  background: rgba(255, 250, 244, 0.76);
+  padding: clamp(16px, 2vw, 22px);
+  box-shadow: 0 20px 46px rgba(43, 35, 28, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.44);
+  backdrop-filter: blur(14px);
+}
+
+.story-copy p:last-child {
+  max-width: 420px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.story-illustration {
+  position: absolute;
+  z-index: 3;
+  width: min(160px, 36%);
+  right: 18px;
+  top: 16px;
+  filter: drop-shadow(0 18px 24px rgba(72, 58, 45, 0.16));
 }
 
 .mesh-visual {
@@ -536,11 +535,10 @@ main {
   z-index: 2;
   display: grid;
   grid-column: 2;
-  grid-row: 1 / span 2;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   align-self: stretch;
-  width: min(680px, 100%);
+  width: 100%;
   justify-self: end;
 }
 
@@ -1305,20 +1303,8 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .memory-hero {
-    grid-template-columns: minmax(260px, 0.9fr) minmax(260px, 1fr);
-  }
-
-  .memory-illustration {
-    position: absolute;
-    right: 18px;
-    bottom: 8px;
-    width: 180px;
-    opacity: 0.9;
-  }
-
-  .memory-copy {
-    padding-right: 156px;
+  .mesh-card {
+    grid-template-columns: minmax(320px, 0.9fr) minmax(460px, 1.1fr);
   }
 }
 
@@ -1331,6 +1317,10 @@ main {
 
   .mesh-card h3 {
     max-width: none;
+  }
+
+  .overview-story {
+    min-height: 390px;
   }
 
   .mesh-stats {
@@ -1406,42 +1396,53 @@ main {
     margin: 12px 0 18px;
   }
 
-  .memory-hero {
-    min-height: auto;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    padding: 14px;
-    border-radius: 24px;
-  }
-
-  .memory-photo {
-    min-height: 190px;
-    border-radius: 20px;
-  }
-
-  .memory-copy {
-    padding-right: 92px;
-  }
-
-  .memory-copy h3 {
-    font-size: 30px;
-  }
-
-  .memory-copy p:last-child {
-    font-size: 13px;
-  }
-
-  .memory-illustration {
-    right: 8px;
-    bottom: 8px;
-    width: 104px;
-  }
-
   .mesh-card {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
     min-height: auto;
     padding: 20px;
+  }
+
+  .overview-story {
+    min-height: 0;
+    display: grid;
+    overflow: visible;
+    border-radius: 22px;
+  }
+
+  .story-photo {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+    border-radius: 22px;
+  }
+
+  .story-photo::after {
+    background: linear-gradient(180deg, rgba(34, 30, 25, 0.02), rgba(34, 30, 25, 0.12));
+  }
+
+  .story-copy {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: -24px 12px 12px;
+    border-radius: 18px;
+    padding: 15px;
+  }
+
+  .story-copy h3 {
+    font-size: 30px;
+  }
+
+  .story-copy p:last-child {
+    font-size: 13px;
+  }
+
+  .story-illustration {
+    top: 14px;
+    right: 12px;
+    width: 98px;
   }
 
   .mesh-card h3 {
@@ -1600,15 +1601,8 @@ main {
     padding: 18px;
   }
 
-  .memory-copy {
-    padding-right: 0;
-  }
-
-  .memory-illustration {
-    position: static;
-    width: 128px;
-    justify-self: end;
-    margin-top: -22px;
+  .story-illustration {
+    width: 82px;
   }
 
   .mesh-stats article {

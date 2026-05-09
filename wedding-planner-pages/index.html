@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>MYYYH 的婚礼小屋</title>
-    <link rel="stylesheet" href="./styles.css?v=20260509-memory-money" />
+    <link rel="stylesheet" href="./styles.css?v=20260509-unified-overview" />
   </head>
   <body>
     <noscript>这个页面需要开启 JavaScript。</noscript>
@@ -72,23 +72,18 @@
             <button class="secondary-button" type="button" data-action="refresh">同步一下</button>
           </div>
 
-          <section class="memory-hero" aria-label="属于我们的回忆">
-            <div class="memory-photo">
-              <img src="./assets/memory-garden.jpg" alt="小时候坐在花前的合照" loading="eager" />
-            </div>
-            <div class="memory-copy">
-              <p class="eyebrow">Our Story</p>
-              <h3>从小小的我们，到一起走向婚礼</h3>
-              <p>把要准备的事、要花的心意、快要到来的日子，都慢慢收进这间小屋。</p>
-            </div>
-            <img class="memory-illustration" src="./assets/wedding-walk.png" alt="牵手走向婚礼的插画" loading="lazy" />
-          </section>
-
           <div class="overview-bento">
             <section class="mesh-card" aria-labelledby="meshTitle">
-              <div>
-                <p class="eyebrow">Today</p>
-                <h3 id="meshTitle">今天的小进展</h3>
+              <div class="overview-story">
+                <div class="story-photo">
+                  <img src="./assets/memory-garden.jpg" alt="小时候坐在花前的合照" loading="eager" />
+                </div>
+                <div class="story-copy">
+                  <p class="eyebrow">Our Story</p>
+                  <h3 id="meshTitle">从小小的我们，到一起走向婚礼</h3>
+                  <p>把要准备的事、要花的心意、快要到来的日子，都慢慢收进这间小屋。</p>
+                </div>
+                <img class="story-illustration" src="./assets/wedding-walk.png" alt="牵手走向婚礼的插画" loading="lazy" />
               </div>
 
               <div class="mesh-visual" aria-hidden="true">
@@ -314,6 +309,6 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="./config.js"></script>
-    <script type="module" src="./app.js?v=20260509-memory-money"></script>
+    <script type="module" src="./app.js?v=20260509-unified-overview"></script>
   </body>
 </html>
