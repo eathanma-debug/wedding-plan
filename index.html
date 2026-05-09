@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>MYYYH 的婚礼小屋</title>
+    <link rel="stylesheet" href="./styles.css?v=20260509-login-ready" />
+  </head>
+  <body>
+    <noscript>这个页面需要开启 JavaScript。</noscript>
+
+    <section class="auth-screen" id="authScreen" aria-labelledby="authTitle">
+      <div class="auth-panel">
+        <div>
+          <p class="eyebrow">MYYYH Wedding Nest</p>
+          <h1 id="authTitle">MYYYH 的<span class="keep-together">婚礼小屋</span></h1>
+          <p class="lead">把订婚、婚礼和每一笔小心意，都慢慢放进这里。</p>
+        </div>
+
+        <form class="auth-form" id="authForm">
+          <label for="emailInput">邮箱</label>
+          <div class="inline-control">
+            <input id="emailInput" name="email" type="text" inputmode="email" autocomplete="email" required />
+            <button class="primary-button" type="submit">进入</button>
+          </div>
+          <p class="form-note" id="authModeNote"></p>
+          <p class="form-error" id="authError" role="alert"></p>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell is-hidden" id="appShell">
+      <div class="app-frame">
+        <aside class="side-rail" aria-label="页面导航">
+          <a class="rail-logo" href="#overview" aria-label="回到概览">💍</a>
+          <nav class="rail-nav">
+            <a href="#overview" aria-label="首页"><span>🏠</span><small>首页</small></a>
+            <a href="#tasks" aria-label="清单"><span>✅</span><small>清单</small></a>
+            <a href="#ledger" aria-label="小金库"><span>💰</span><small>小金库</small></a>
+          </nav>
+          <div class="rail-avatar" aria-hidden="true">💕</div>
+        </aside>
+
+        <div class="dashboard-area">
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">MYYYH Wedding Nest</p>
+              <h1>MYYYH 的<span class="keep-together">婚礼小屋</span></h1>
+            </div>
+
+            <div class="account-bar">
+              <span class="mode-pill" id="modePill"></span>
+              <span class="user-email" id="userEmail"></span>
+              <button class="ghost-button" type="button" data-action="sign-out">离开小屋</button>
+            </div>
+          </header>
+
+          <nav class="quick-nav" aria-label="页面导航">
+            <a href="#overview">首页</a>
+            <a href="#tasks">清单</a>
+            <a href="#ledger">小金库</a>
+          </nav>
+
+          <main>
+        <section class="page-section" id="overview">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Our Today</p>
+              <h2>甜蜜总览</h2>
+            </div>
+            <button class="secondary-button" type="button" data-action="refresh">同步一下</button>
+          </div>
+
+          <div class="overview-bento">
+            <section class="mesh-card" aria-labelledby="meshTitle">
+              <div>
+                <p class="eyebrow">Today</p>
+                <h3 id="meshTitle">今天的小进展</h3>
+              </div>
+
+              <div class="mesh-visual" aria-hidden="true">
+                <span class="mesh-wash mesh-wash-gold"></span>
+                <span class="mesh-wash mesh-wash-coral"></span>
+                <span class="mesh-wash mesh-wash-ink"></span>
+              </div>
+
+              <div class="mesh-stats" aria-label="今日筹备数据">
+                <article>
+                  <span>要惦记</span>
+                  <strong id="heroTodo">0 项</strong>
+                  <small id="heroTaskSummary">0/0 完成</small>
+                </article>
+                <article>
+                  <span>婚礼倒计时</span>
+                  <strong id="heroWeddingDays">--</strong>
+                  <small id="heroWeddingDate">--</small>
+                </article>
+                <article>
+                  <span>订婚倒计时</span>
+                  <strong id="heroEngagementDays">--</strong>
+                  <small id="heroEngagementDate">--</small>
+                </article>
+                <article>
+                  <span>小金库</span>
+                  <strong id="heroBalance">¥0</strong>
+                  <small>现在还有</small>
+                </article>
+                <article>
+                  <span>已花费</span>
+                  <strong id="heroExpense">¥0</strong>
+                  <small>已经花掉</small>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <div class="overview-grid">
+            <section class="work-surface">
+              <div class="surface-heading">
+                <h3>我们的日子</h3>
+              </div>
+              <form class="date-form" id="settingsForm">
+                <label>
+                  订婚日期
+                  <input name="engagementDate" type="date" required />
+                </label>
+                <label>
+                  婚礼日期
+                  <input name="weddingDate" type="date" required />
+                </label>
+                <button class="primary-button" type="submit">记好日子</button>
+              </form>
+            </section>
+
+            <section class="work-surface">
+              <div class="surface-heading">
+                <h3>最近要想着</h3>
+              </div>
+              <div id="upcomingList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page-section" id="tasks">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Little List</p>
+              <h2>婚礼小清单</h2>
+            </div>
+          </div>
+
+          <section class="work-surface">
+            <form class="dense-form" id="taskForm">
+              <label>
+                要准备的事
+                <input name="name" type="text" placeholder="订婚宴、拍婚纱照、试礼服..." required />
+              </label>
+              <label>
+                现在在哪一步
+                <select name="phase" id="taskPhase"></select>
+              </label>
+              <label>
+                想在什么时候完成
+                <input name="dueDate" type="date" required />
+              </label>
+              <label>
+                预计花多少
+                <input name="plannedAmount" type="text" inputmode="decimal" />
+              </label>
+              <label class="span-2">
+                小备注
+                <input name="notes" type="text" placeholder="谁来负责、喜欢哪家、想记住什么..." />
+              </label>
+              <label class="check-row">
+                <input name="recordExpense" type="checkbox" />
+                这件事已经花钱了
+              </label>
+              <label>
+                花在哪一类
+                <select name="expenseCategory" id="taskExpenseCategory"></select>
+              </label>
+              <button class="primary-button" type="submit">添一件小事</button>
+            </form>
+          </section>
+
+          <div class="phase-board" id="taskBoard"></div>
+        </section>
+
+        <section class="page-section" id="ledger">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Money Jar</p>
+              <h2>我们的小金库</h2>
+            </div>
+          </div>
+
+          <section class="work-surface">
+            <form class="dense-form finance-form" id="transactionForm">
+              <label>
+                哪一天
+                <input name="date" type="date" required />
+              </label>
+              <label>
+                记一笔
+                <select name="type" id="transactionType">
+                  <option value="income">收入</option>
+                  <option value="expense">支出</option>
+                </select>
+              </label>
+              <label>
+                多少钱
+                <input name="amount" type="text" inputmode="decimal" required />
+              </label>
+              <label>
+                放在哪一类
+                <select name="category" id="transactionCategory"></select>
+              </label>
+              <label>
+                关联的小事
+                <select name="taskId" id="transactionTask"></select>
+              </label>
+              <label class="span-2">
+                小备注
+                <input name="remarks" type="text" placeholder="给谁、在哪买、想记住什么..." />
+              </label>
+              <button class="primary-button" type="submit">存进小金库</button>
+            </form>
+          </section>
+
+          <div class="overview-grid">
+            <section class="work-surface">
+              <div class="surface-heading">
+                <h3>钱都花在哪</h3>
+              </div>
+              <div id="categoryBreakdown"></div>
+            </section>
+
+            <section class="work-surface">
+              <div class="surface-heading">
+                <h3>每一笔小记录</h3>
+                <span class="status-pill">每条都能改</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>操作</th>
+                      <th>哪天</th>
+                      <th>类型</th>
+                      <th>金额</th>
+                      <th>类目</th>
+                      <th>关联</th>
+                      <th>小备注</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionRows"></tbody>
+                </table>
+              </div>
+              <div class="transaction-card-list" id="transactionCards"></div>
+            </section>
+          </div>
+        </section>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <dialog class="modal" id="editDialog">
+      <div class="modal-body" id="modalBody"></div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="./config.js"></script>
+    <script type="module" src="./app.js?v=20260509-login-ready"></script>
+  </body>
+</html>
