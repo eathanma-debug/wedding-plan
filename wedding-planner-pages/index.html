@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>MYYYH 的婚礼小屋</title>
-    <link rel="stylesheet" href="./styles.css?v=20260509-fast-add" />
+    <link rel="stylesheet" href="./styles.css?v=20260509-memory-money" />
   </head>
   <body>
     <noscript>这个页面需要开启 JavaScript。</noscript>
@@ -37,7 +37,7 @@
           <nav class="rail-nav">
             <a href="#overview" aria-label="首页"><span>🏠</span><small>首页</small></a>
             <a href="#tasks" aria-label="清单"><span>✅</span><small>清单</small></a>
-            <a href="#ledger" aria-label="小金库"><span>💰</span><small>小金库</small></a>
+            <a href="#ledger" aria-label="喜金小库"><span>💰</span><small>喜金</small></a>
           </nav>
           <div class="rail-avatar" aria-hidden="true">💕</div>
         </aside>
@@ -59,7 +59,7 @@
           <nav class="quick-nav" aria-label="页面导航">
             <a href="#overview">首页</a>
             <a href="#tasks">清单</a>
-            <a href="#ledger">小金库</a>
+            <a href="#ledger">喜金</a>
           </nav>
 
           <main>
@@ -71,6 +71,18 @@
             </div>
             <button class="secondary-button" type="button" data-action="refresh">同步一下</button>
           </div>
+
+          <section class="memory-hero" aria-label="属于我们的回忆">
+            <div class="memory-photo">
+              <img src="./assets/memory-garden.jpg" alt="小时候坐在花前的合照" loading="eager" />
+            </div>
+            <div class="memory-copy">
+              <p class="eyebrow">Our Story</p>
+              <h3>从小小的我们，到一起走向婚礼</h3>
+              <p>把要准备的事、要花的心意、快要到来的日子，都慢慢收进这间小屋。</p>
+            </div>
+            <img class="memory-illustration" src="./assets/wedding-walk.png" alt="牵手走向婚礼的插画" loading="lazy" />
+          </section>
 
           <div class="overview-bento">
             <section class="mesh-card" aria-labelledby="meshTitle">
@@ -102,14 +114,19 @@
                   <small id="heroEngagementDate">--</small>
                 </article>
                 <article>
-                  <span>小金库</span>
+                  <span>喜金已备</span>
                   <strong id="heroBalance">¥0</strong>
-                  <small>现在还有</small>
+                  <small>手边能安排的心意</small>
                 </article>
                 <article>
-                  <span>已花费</span>
+                  <span>待入喜袋</span>
+                  <strong id="heroUpcomingIncome">¥0</strong>
+                  <small>日子到了再算入</small>
+                </article>
+                <article>
+                  <span>已付喜账</span>
                   <strong id="heroExpense">¥0</strong>
-                  <small>已经花掉</small>
+                  <small>已经花在婚礼上</small>
                 </article>
               </div>
             </section>
@@ -191,25 +208,25 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Money Jar</p>
-              <h2>我们的小金库</h2>
+              <h2>我们的喜金小库</h2>
             </div>
           </div>
 
           <section class="work-surface">
             <form class="dense-form finance-form" id="transactionForm">
               <label>
-                哪一天
+                入袋/花出日
                 <input name="date" type="date" required />
               </label>
               <label>
-                记一笔
+                添一笔喜账
                 <select name="type" id="transactionType">
-                  <option value="income">收入</option>
-                  <option value="expense">支出</option>
+                  <option value="income">添喜金</option>
+                  <option value="expense">付喜账</option>
                 </select>
               </label>
               <label>
-                多少钱
+                多少心意
                 <input name="amount" type="text" inputmode="decimal" required />
               </label>
               <label>
@@ -224,14 +241,37 @@
                 小备注
                 <input name="remarks" type="text" placeholder="给谁、在哪买、想记住什么..." />
               </label>
-              <button class="primary-button" type="submit">存进小金库</button>
+              <button class="primary-button" type="submit">收进喜金小库</button>
             </form>
+          </section>
+
+          <section class="finance-summary" aria-label="喜金小库汇总">
+            <article class="finance-card finance-card-primary">
+              <span>喜金已备</span>
+              <strong id="ledgerAvailable">¥0</strong>
+              <small>已入喜袋 - 已付喜账</small>
+            </article>
+            <article class="finance-card">
+              <span>已入喜袋</span>
+              <strong id="ledgerReceived">¥0</strong>
+              <small>已经来到小屋的心意</small>
+            </article>
+            <article class="finance-card finance-card-soft">
+              <span>待入喜袋</span>
+              <strong id="ledgerUpcomingIncome">¥0</strong>
+              <small>未来会收到的心意</small>
+            </article>
+            <article class="finance-card">
+              <span>已付喜账</span>
+              <strong id="ledgerExpense">¥0</strong>
+              <small>已经花在婚礼上</small>
+            </article>
           </section>
 
           <div class="overview-grid">
             <section class="work-surface">
               <div class="surface-heading">
-                <h3>钱都花在哪</h3>
+                <h3>喜账花在哪</h3>
               </div>
               <div id="categoryBreakdown"></div>
             </section>
@@ -248,6 +288,7 @@
                       <th>操作</th>
                       <th>哪天</th>
                       <th>类型</th>
+                      <th>状态</th>
                       <th>金额</th>
                       <th>类目</th>
                       <th>关联</th>
@@ -273,6 +314,6 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="./config.js"></script>
-    <script type="module" src="./app.js?v=20260509-fast-add"></script>
+    <script type="module" src="./app.js?v=20260509-memory-money"></script>
   </body>
 </html>

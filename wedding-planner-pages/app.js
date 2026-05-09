@@ -18,6 +18,7 @@ const allowedEmails = new Set((config.allowedEmails || []).map((email) => email.
 const supabaseConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
 
 let store;
+let storePromise;
 let toastTimer;
 let categoryListenerBound = false;
 let isLocalMode = false; // 标记是否降级到本地模式
@@ -128,8 +129,13 @@ const els = {
   heroEngagementDays: document.getElementById("heroEngagementDays"),
   heroEngagementDate: document.getElementById("heroEngagementDate"),
   heroBalance: document.getElementById("heroBalance"),
+  heroUpcomingIncome: document.getElementById("heroUpcomingIncome"),
   heroTaskSummary: document.getElementById("heroTaskSummary"),
   heroExpense: document.getElementById("heroExpense"),
+  ledgerAvailable: document.getElementById("ledgerAvailable"),
+  ledgerReceived: document.getElementById("ledgerReceived"),
+  ledgerUpcomingIncome: document.getElementById("ledgerUpcomingIncome"),
+  ledgerExpense: document.getElementById("ledgerExpense"),
   toast: document.getElementById("toast"),
   editDialog: document.getElementById("editDialog"),
   modalBody: document.getElementById("modalBody")
@@ -239,6 +245,39 @@ function sortTransactions(transactions) {
 function getTaskName(taskId) {
   if (!taskId) return "";
   return state.tasks.find((task) => task.id === taskId)?.name || "已删掉的小事";
+}
+
+function hasHappened(dateString) {
+  const date = toISODate(dateString);
+  return Boolean(date) && date <= todayISO();
+}
+
+function getFinanceTotals() {
+  return state.transactions.reduce((totals, tx) => {
+    if (tx.isIncome) {
+      if (hasHappened(tx.date)) {
+        totals.receivedIncome += tx.amount;
+      } else {
+        totals.upcomingIncome += tx.amount;
+      }
+    } else if (hasHappened(tx.date)) {
+      totals.paidExpense += tx.amount;
+    } else {
+      totals.upcomingExpense += tx.amount;
+    }
+    return totals;
+  }, {
+    receivedIncome: 0,
+    upcomingIncome: 0,
+    paidExpense: 0,
+    upcomingExpense: 0
+  });
+}
+
+function transactionStatus(tx) {
+  const happened = hasHappened(tx.date);
+  if (tx.isIncome) return happened ? "已入喜袋" : "待入喜袋";
+  return happened ? "已付喜账" : "待付喜账";
 }
 
 class LocalStore {
@@ -476,6 +515,22 @@ async function createStore() {
   }
 }
 
+async function ensureStore() {
+  if (store) return store;
+  if (!storePromise) {
+    storePromise = createStore()
+      .then((nextStore) => {
+        store = nextStore;
+        return store;
+      })
+      .catch((error) => {
+        storePromise = null;
+        throw error;
+      });
+  }
+  return storePromise;
+}
+
 function seedStaticOptions() {
   fillSelect(els.taskPhase, PHASES);
   fillSelect(els.taskExpenseCategory, EXPENSE_CATEGORIES);
@@ -524,7 +579,7 @@ function showApp() {
 
 async function boot() {
   seedStaticOptions();
-  store = await createStore();
+  store = await ensureStore();
   store.onAuth(async (user) => {
     state.user = user;
     if (state.user && !allowedEmails.has(state.user.email.toLowerCase())) {
@@ -585,18 +640,18 @@ function renderMetrics() {
   const totalTasks = state.tasks.length;
   const doneTasks = state.tasks.filter((task) => task.completed).length;
   const pendingTasks = totalTasks - doneTasks;
-  const income = state.transactions.filter((tx) => tx.isIncome).reduce((sum, tx) => sum + tx.amount, 0);
-  const expense = state.transactions.filter((tx) => !tx.isIncome).reduce((sum, tx) => sum + tx.amount, 0);
-  const balance = income - expense;
+  const totals = getFinanceTotals();
+  const balance = totals.receivedIncome - totals.paidExpense;
 
   els.heroTodo.textContent = `${pendingTasks} 项`;
   els.heroWeddingDays.textContent = countdownText(state.settings.weddingDate);
   els.heroWeddingDate.textContent = formatDate(state.settings.weddingDate);
   els.heroEngagementDays.textContent = countdownText(state.settings.engagementDate);
   els.heroBalance.textContent = money(balance);
+  els.heroUpcomingIncome.textContent = money(totals.upcomingIncome);
   els.heroEngagementDate.textContent = formatDate(state.settings.engagementDate);
   els.heroTaskSummary.textContent = `${doneTasks}/${totalTasks} 做好了`;
-  els.heroExpense.textContent = money(expense);
+  els.heroExpense.textContent = money(totals.paidExpense);
 }
 
 function renderUpcoming() {
@@ -635,7 +690,7 @@ function renderTaskSelects() {
 
 function actualSpentForTask(taskId) {
   return state.transactions
-    .filter((tx) => !tx.isIncome && tx.taskId === taskId)
+    .filter((tx) => !tx.isIncome && tx.taskId === taskId && hasHappened(tx.date))
     .reduce((sum, tx) => sum + tx.amount, 0);
 }
 
@@ -647,9 +702,12 @@ function renderTaskBoard() {
       const actual = actualSpentForTask(task.id);
       return `
         <article class="task-card ${task.completed ? "is-done" : ""}">
-          <p class="task-name">${escapeHtml(task.name)}</p>
+          <div class="task-card-head">
+            <p class="task-name">${escapeHtml(task.name)}</p>
+            <span class="task-date">${formatDate(task.dueDate)}</span>
+          </div>
           <div class="task-meta">
-            <span class="chip">${formatDate(task.dueDate)}</span>
+            <span class="chip">${countdownText(task.dueDate)}</span>
             <span class="chip">预计 ${money(task.plannedAmount)}</span>
             <span class="chip">已花 ${money(actual)}</span>
           </div>
@@ -661,23 +719,38 @@ function renderTaskBoard() {
           </div>
         </article>
       `;
-    }).join("") : `<div class="empty-state">这里还空着。添一件小事后，可以在卡片上修改或删除。</div>`;
+    }).join("") : `<div class="phase-empty">这里暂时还空着</div>`;
     return `
-      <section class="phase-lane">
-        <div class="phase-title"><span>${escapeHtml(phase)}</span><span>${done}/${tasks.length}</span></div>
-        ${cards}
+      <section class="phase-lane ${tasks.length ? "" : "is-empty"}">
+        <div class="phase-title">
+          <div>
+            <span>${escapeHtml(phase)}</span>
+            <small>${tasks.length ? `${tasks.length} 件小事` : "还没有安排"}</small>
+          </div>
+          <strong>${done}/${tasks.length}</strong>
+        </div>
+        <div class="task-list">${cards}</div>
       </section>
     `;
   }).join("");
 }
 
 function renderFinance() {
+  renderFinanceSummary();
   renderCategoryBreakdown();
   renderTransactionRows();
 }
 
+function renderFinanceSummary() {
+  const totals = getFinanceTotals();
+  els.ledgerAvailable.textContent = money(totals.receivedIncome - totals.paidExpense);
+  els.ledgerReceived.textContent = money(totals.receivedIncome);
+  els.ledgerUpcomingIncome.textContent = money(totals.upcomingIncome);
+  els.ledgerExpense.textContent = money(totals.paidExpense);
+}
+
 function renderCategoryBreakdown() {
-  const expenses = state.transactions.filter((tx) => !tx.isIncome);
+  const expenses = state.transactions.filter((tx) => !tx.isIncome && hasHappened(tx.date));
   const total = expenses.reduce((sum, tx) => sum + tx.amount, 0);
   const grouped = expenses.reduce((acc, tx) => {
     acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
@@ -706,8 +779,8 @@ function renderCategoryBreakdown() {
 
 function renderTransactionRows() {
   if (!state.transactions.length) {
-    els.transactionRows.innerHTML = `<tr><td colspan="7"><div class="empty-state">还没有小记录。存一笔收入或支出后，每一行都会有修改和删除。</div></td></tr>`;
-    els.transactionCards.innerHTML = `<div class="empty-state">还没有小记录。存一笔收入或支出后，每张卡片底部都会有修改和删除。</div>`;
+    els.transactionRows.innerHTML = `<tr><td colspan="8"><div class="empty-state">还没有小记录。添一笔喜金或喜账后，每一行都会有修改和删除。</div></td></tr>`;
+    els.transactionCards.innerHTML = `<div class="empty-state">还没有小记录。添一笔喜金或喜账后，每张卡片底部都会有修改和删除。</div>`;
     return;
   }
 
@@ -720,7 +793,8 @@ function renderTransactionRows() {
         </div>
       </td>
       <td>${formatDate(tx.date)}</td>
-      <td>${tx.isIncome ? "收入" : "支出"}</td>
+      <td>${tx.isIncome ? "添喜金" : "付喜账"}</td>
+      <td><span class="status-chip ${hasHappened(tx.date) ? "is-settled" : "is-upcoming"}">${transactionStatus(tx)}</span></td>
       <td class="${tx.isIncome ? "amount-income" : "amount-expense"}">${money(tx.amount)}</td>
       <td>${escapeHtml(tx.category)}</td>
       <td>${escapeHtml(getTaskName(tx.taskId) || "-")}</td>
@@ -731,11 +805,14 @@ function renderTransactionRows() {
   els.transactionCards.innerHTML = state.transactions.map((tx) => `
     <article class="transaction-card ${tx.isIncome ? "is-income" : "is-expense"}">
       <div class="transaction-card-head">
-        <span class="transaction-type">${tx.isIncome ? "收入" : "支出"}</span>
+        <div class="transaction-card-title">
+          <span class="transaction-type">${tx.isIncome ? "添喜金" : "付喜账"}</span>
+          <span class="status-chip ${hasHappened(tx.date) ? "is-settled" : "is-upcoming"}">${transactionStatus(tx)}</span>
+        </div>
         <strong class="${tx.isIncome ? "amount-income" : "amount-expense"}">${money(tx.amount)}</strong>
       </div>
       <div class="transaction-card-grid">
-        <span>哪天</span><strong>${formatDate(tx.date)}</strong>
+        <span>日子</span><strong>${formatDate(tx.date)}</strong>
         <span>类目</span><strong>${escapeHtml(tx.category)}</strong>
         <span>关联</span><strong>${escapeHtml(getTaskName(tx.taskId) || "-")}</strong>
         <span>小备注</span><strong>${escapeHtml(tx.remarks || "-")}</strong>
@@ -818,9 +895,9 @@ function openTransactionDialog(id) {
     <form id="editTransactionForm">
       <h3>修改这笔小记录</h3>
       <div class="modal-grid">
-        <label>哪一天<input name="date" type="date" value="${escapeHtml(tx.date)}" required /></label>
-        <label>记一笔<select name="type"><option value="income" ${tx.isIncome ? "selected" : ""}>收入</option><option value="expense" ${!tx.isIncome ? "selected" : ""}>支出</option></select></label>
-        <label>多少钱<input name="amount" type="text" inputmode="decimal" value="${tx.amount}" required /></label>
+        <label>入袋/花出日<input name="date" type="date" value="${escapeHtml(tx.date)}" required /></label>
+        <label>添一笔喜账<select name="type"><option value="income" ${tx.isIncome ? "selected" : ""}>添喜金</option><option value="expense" ${!tx.isIncome ? "selected" : ""}>付喜账</option></select></label>
+        <label>多少心意<input name="amount" type="text" inputmode="decimal" value="${tx.amount}" required /></label>
         <label>放在哪一类<select name="category">${categoryOptions}</select></label>
         <label>关联的小事<select name="taskId">${taskOptions}</select></label>
         <label>小备注<input name="remarks" type="text" value="${escapeHtml(tx.remarks)}" /></label>
@@ -907,7 +984,7 @@ async function handleDocumentAction(event) {
       notify("未找到该任务");
       return;
     }
-    if (!confirm(`确定要删除「${task.name}」吗？相关小金库记录会保留。`)) return;
+    if (!confirm(`确定要删除「${task.name}」吗？相关喜金记录会保留。`)) return;
     try {
       await store.deleteTask(id);
       await loadData();
@@ -925,7 +1002,7 @@ async function handleDocumentAction(event) {
       notify("未找到该记录");
       return;
     }
-    const amountText = `${tx.isIncome ? "收入" : "支出"} ${money(tx.amount)}`;
+    const amountText = `${tx.isIncome ? "添喜金" : "付喜账"} ${money(tx.amount)}`;
     if (!confirm(`确定要删除这笔${amountText}吗？`)) return;
     try {
       await store.deleteTransaction(id);
@@ -947,11 +1024,12 @@ els.authForm.addEventListener("submit", async (event) => {
   }
   const done = setBusy(event.submitter, supabaseConfigured ? "发送中" : "进入中");
   try {
-    const result = await store.signIn(email);
+    const activeStore = await ensureStore();
+    const result = await activeStore.signIn(email);
     if (result.sent) {
       els.authModeNote.textContent = "入口链接已发到邮箱啦，点一下就能回来。";
     } else {
-      state.user = await store.getUser();
+      state.user = await activeStore.getUser();
       await renderRoute();
     }
   } catch (error) {
@@ -987,7 +1065,8 @@ els.taskForm.addEventListener("submit", async (event) => {
   const input = readForm(form);
   const plannedAmount = numberValue(input.plannedAmount);
   try {
-    const task = await store.createTask({
+    const activeStore = await ensureStore();
+    const task = await activeStore.createTask({
       name: input.name.trim(),
       phase: input.phase,
       dueDate: input.dueDate,
@@ -999,7 +1078,7 @@ els.taskForm.addEventListener("submit", async (event) => {
     state.tasks = sortTasks([...state.tasks, task]);
 
     if (input.recordExpense && plannedAmount > 0) {
-      const tx = await store.createTransaction({
+      const tx = await activeStore.createTransaction({
         date: todayISO(),
         amount: plannedAmount,
         category: input.expenseCategory,
@@ -1027,7 +1106,8 @@ els.transactionForm.addEventListener("submit", async (event) => {
   const done = setBusy(event.submitter, "存入中");
   const input = readForm(form);
   try {
-    const tx = await store.createTransaction({
+    const activeStore = await ensureStore();
+    const tx = await activeStore.createTransaction({
       date: input.date,
       amount: numberValue(input.amount),
       category: input.category,
@@ -1040,7 +1120,7 @@ els.transactionForm.addEventListener("submit", async (event) => {
     els.transactionForm.elements.date.value = todayISO();
     fillSelect(els.transactionCategory, INCOME_CATEGORIES);
     renderAll();
-    notify("小金库已记好");
+    notify("喜金小库已记好");
   } catch (error) {
     notify(error.message || "记录失败");
   } finally {
