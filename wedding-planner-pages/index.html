@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>MYYYH 的婚礼小屋</title>
-    <link rel="stylesheet" href="./styles.css?v=20260509-unified-overview" />
+    <link rel="stylesheet" href="./styles.css?v=20260509-story-polish" />
   </head>
   <body>
     <noscript>这个页面需要开启 JavaScript。</noscript>
@@ -240,6 +240,34 @@
             </form>
           </section>
 
+          <section class="monthly-saving-panel">
+            <div class="monthly-saving-intro">
+              <p class="eyebrow">Monthly Promise</p>
+              <h3>月月添喜金</h3>
+              <p>把每个月准备存下的心意先排好。日子到了，它会自己从待入喜袋走进已入喜袋。</p>
+            </div>
+            <form class="monthly-saving-form" id="monthlySavingForm">
+              <label>
+                每月添多少
+                <input name="amount" type="text" inputmode="decimal" placeholder="9250" required />
+              </label>
+              <label>
+                从哪天开始
+                <input name="startDate" type="date" required />
+              </label>
+              <label>
+                添几个月
+                <input name="months" type="number" inputmode="numeric" min="1" max="60" placeholder="13" required />
+              </label>
+              <label>
+                小备注
+                <input name="remarks" type="text" placeholder="比如：婚礼共同储蓄" />
+              </label>
+              <button class="primary-button" type="submit">排好月月喜金</button>
+            </form>
+            <div class="monthly-saving-list" id="monthlySavingList"></div>
+          </section>
+
           <section class="finance-summary" aria-label="喜金小库汇总">
             <article class="finance-card finance-card-primary">
               <span>喜金已备</span>
@@ -309,6 +337,6 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="./config.js"></script>
-    <script type="module" src="./app.js?v=20260509-unified-overview"></script>
+    <script type="module" src="./app.js?v=20260509-story-polish"></script>
   </body>
 </html>

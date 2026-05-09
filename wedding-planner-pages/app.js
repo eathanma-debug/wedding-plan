@@ -62,6 +62,17 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function addMonths(dateString, offset) {
+  const [year, month, day] = toISODate(dateString).split("-").map(Number);
+  const target = new Date(year, month - 1 + offset, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(day, lastDay));
+  const nextYear = target.getFullYear();
+  const nextMonth = String(target.getMonth() + 1).padStart(2, "0");
+  const nextDay = String(target.getDate()).padStart(2, "0");
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+}
+
 function money(value) {
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
@@ -118,6 +129,8 @@ const els = {
   transactionType: document.getElementById("transactionType"),
   transactionCategory: document.getElementById("transactionCategory"),
   transactionTask: document.getElementById("transactionTask"),
+  monthlySavingForm: document.getElementById("monthlySavingForm"),
+  monthlySavingList: document.getElementById("monthlySavingList"),
   transactionRows: document.getElementById("transactionRows"),
   transactionCards: document.getElementById("transactionCards"),
   taskBoard: document.getElementById("taskBoard"),
@@ -239,7 +252,11 @@ function sortTasks(tasks) {
 }
 
 function sortTransactions(transactions) {
-  return [...transactions].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return [...transactions].sort((a, b) => {
+    const dateDiff = String(b.date).localeCompare(String(a.date));
+    if (dateDiff !== 0) return dateDiff;
+    return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+  });
 }
 
 function getTaskName(taskId) {
@@ -278,6 +295,10 @@ function transactionStatus(tx) {
   const happened = hasHappened(tx.date);
   if (tx.isIncome) return happened ? "已入喜袋" : "待入喜袋";
   return happened ? "已付喜账" : "待付喜账";
+}
+
+function isMonthlySaving(tx) {
+  return tx.isIncome && tx.category === "每月存款";
 }
 
 class LocalStore {
@@ -537,6 +558,7 @@ function seedStaticOptions() {
   fillSelect(els.transactionCategory, INCOME_CATEGORIES);
   els.taskForm.elements.dueDate.value = todayISO();
   els.transactionForm.elements.date.value = todayISO();
+  els.monthlySavingForm.elements.startDate.value = todayISO();
   if (!categoryListenerBound) {
     els.transactionType.addEventListener("change", () => {
       fillSelect(
@@ -736,9 +758,46 @@ function renderTaskBoard() {
 }
 
 function renderFinance() {
+  renderMonthlySaving();
   renderFinanceSummary();
   renderCategoryBreakdown();
   renderTransactionRows();
+}
+
+function renderMonthlySaving() {
+  const rows = state.transactions
+    .filter(isMonthlySaving)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const received = rows.filter((tx) => hasHappened(tx.date)).reduce((sum, tx) => sum + tx.amount, 0);
+  const upcoming = rows.filter((tx) => !hasHappened(tx.date)).reduce((sum, tx) => sum + tx.amount, 0);
+
+  if (!rows.length) {
+    els.monthlySavingList.innerHTML = `<div class="monthly-saving-empty">还没有月月喜金计划。填好金额和月份后，这里会排出每个月的小心意。</div>`;
+    return;
+  }
+
+  els.monthlySavingList.innerHTML = `
+    <div class="monthly-saving-stats">
+      <span><strong>${rows.length}</strong><small>个月</small></span>
+      <span><strong>${money(received)}</strong><small>已入喜袋</small></span>
+      <span><strong>${money(upcoming)}</strong><small>等日子来</small></span>
+    </div>
+    <div class="monthly-saving-timeline">
+      ${rows.map((tx) => `
+        <article class="monthly-saving-item ${hasHappened(tx.date) ? "is-settled" : ""}">
+          <div>
+            <span>${formatDate(tx.date)}</span>
+            <strong>${money(tx.amount)}</strong>
+          </div>
+          <small>${transactionStatus(tx)}</small>
+          <div class="inline-actions">
+            <button class="icon-button action-button" type="button" title="修改这笔月月喜金" data-action="edit-transaction" data-id="${tx.id}">修改</button>
+            <button class="icon-button action-button danger-action" type="button" title="删除这笔月月喜金" data-action="delete-transaction" data-id="${tx.id}">删除</button>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderFinanceSummary() {
@@ -778,13 +837,14 @@ function renderCategoryBreakdown() {
 }
 
 function renderTransactionRows() {
-  if (!state.transactions.length) {
+  const visibleTransactions = state.transactions.filter((tx) => !isMonthlySaving(tx));
+  if (!visibleTransactions.length) {
     els.transactionRows.innerHTML = `<tr><td colspan="8"><div class="empty-state">还没有小记录。添一笔喜金或喜账后，每一行都会有修改和删除。</div></td></tr>`;
     els.transactionCards.innerHTML = `<div class="empty-state">还没有小记录。添一笔喜金或喜账后，每张卡片底部都会有修改和删除。</div>`;
     return;
   }
 
-  els.transactionRows.innerHTML = state.transactions.map((tx) => `
+  els.transactionRows.innerHTML = visibleTransactions.map((tx) => `
     <tr>
       <td>
         <div class="row-actions">
@@ -802,7 +862,7 @@ function renderTransactionRows() {
     </tr>
   `).join("");
 
-  els.transactionCards.innerHTML = state.transactions.map((tx) => `
+  els.transactionCards.innerHTML = visibleTransactions.map((tx) => `
     <article class="transaction-card ${tx.isIncome ? "is-income" : "is-expense"}">
       <div class="transaction-card-head">
         <div class="transaction-card-title">
@@ -1123,6 +1183,45 @@ els.transactionForm.addEventListener("submit", async (event) => {
     notify("喜金小库已记好");
   } catch (error) {
     notify(error.message || "记录失败");
+  } finally {
+    done();
+  }
+});
+
+els.monthlySavingForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const done = setBusy(event.submitter, "排好中");
+  const input = readForm(form);
+  const amount = numberValue(input.amount);
+  const months = Math.max(1, Math.min(60, Math.floor(numberValue(input.months))));
+  const remarks = input.remarks.trim() || `月月喜金 ${money(amount)}，${months}个月`;
+
+  try {
+    if (amount <= 0) {
+      notify("每月心意要大于 0");
+      return;
+    }
+
+    const activeStore = await ensureStore();
+    const created = await Promise.all(
+      Array.from({ length: months }, (_, index) => activeStore.createTransaction({
+        date: addMonths(input.startDate, index),
+        amount,
+        category: "每月存款",
+        remarks: `${remarks} · 第${index + 1}/${months}个月`,
+        isIncome: true,
+        taskId: ""
+      }))
+    );
+
+    state.transactions = sortTransactions([...state.transactions, ...created]);
+    form.reset();
+    els.monthlySavingForm.elements.startDate.value = todayISO();
+    renderAll();
+    notify("月月喜金已排好");
+  } catch (error) {
+    notify(error.message || "月月喜金保存失败");
   } finally {
     done();
   }
