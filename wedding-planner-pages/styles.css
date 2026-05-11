@@ -80,6 +80,16 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(220, 117, 104, 0.16);
 }
 
+.custom-category-input {
+  margin-top: 4px;
+  border-color: rgba(220, 117, 104, 0.34);
+  background: rgba(255, 247, 238, 0.98);
+}
+
+.custom-category-input::placeholder {
+  color: rgba(128, 112, 100, 0.72);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

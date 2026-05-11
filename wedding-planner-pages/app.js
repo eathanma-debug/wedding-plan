@@ -14,6 +14,7 @@ const config = {
 const PHASES = ["订婚前", "订婚中", "婚前准备", "婚前1月", "婚礼当天"];
 const INCOME_CATEGORIES = ["存款", "每月存款", "工资", "奖金", "自己出资", "爸妈出资", "理财", "基金", "股票", "彩礼", "嫁妆", "其他"];
 const EXPENSE_CATEGORIES = ["场地预订", "婚纱摄影", "婚宴", "珠宝首饰", "礼服西装", "婚庆策划", "请帖喜糖", "蜜月旅行", "其他"];
+const CUSTOM_CATEGORY_VALUE = "__custom_category__";
 const allowedEmails = new Set((config.allowedEmails || []).map((email) => email.toLowerCase()));
 const supabaseConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
 
@@ -125,9 +126,11 @@ const els = {
   taskForm: document.getElementById("taskForm"),
   taskPhase: document.getElementById("taskPhase"),
   taskExpenseCategory: document.getElementById("taskExpenseCategory"),
+  taskCustomExpenseCategory: document.getElementById("taskCustomExpenseCategory"),
   transactionForm: document.getElementById("transactionForm"),
   transactionType: document.getElementById("transactionType"),
   transactionCategory: document.getElementById("transactionCategory"),
+  transactionCustomCategory: document.getElementById("transactionCustomCategory"),
   transactionTask: document.getElementById("transactionTask"),
   monthlySavingForm: document.getElementById("monthlySavingForm"),
   monthlySavingList: document.getElementById("monthlySavingList"),
@@ -172,6 +175,15 @@ function setBusy(button, busyText = "处理中") {
   };
 }
 
+function withTimeout(promise, message, timeoutMs = 15000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(message)), timeoutMs);
+    })
+  ]);
+}
+
 function readForm(form) {
   return Object.fromEntries(new FormData(form).entries());
 }
@@ -184,6 +196,76 @@ function fillSelect(select, options, selected = "") {
       return `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`;
     })
     .join("");
+}
+
+function uniqueTextOptions(values) {
+  const seen = new Set();
+  return values
+    .map((value) => String(value || "").trim())
+    .filter((value) => {
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+}
+
+function categoryOptionsFor(isIncome) {
+  const defaults = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const fromTransactions = state.transactions
+    .filter((tx) => tx.isIncome === isIncome)
+    .map((tx) => tx.category);
+  return uniqueTextOptions([...defaults, ...fromTransactions]);
+}
+
+function fillCategorySelect(select, customInput, options, selected = "", customLabel = "自己写一类") {
+  const normalizedOptions = uniqueTextOptions(options);
+  const selectedText = String(selected || "").trim();
+  const hasSelected = normalizedOptions.includes(selectedText);
+  const nextSelected = selectedText && !hasSelected ? CUSTOM_CATEGORY_VALUE : selectedText;
+  fillSelect(
+    select,
+    normalizedOptions.concat({ value: CUSTOM_CATEGORY_VALUE, label: `＋${customLabel}` }),
+    nextSelected
+  );
+  if (customInput && selectedText && !hasSelected) {
+    customInput.value = selectedText;
+  }
+  syncCustomCategoryField(select, customInput);
+}
+
+function syncCustomCategoryField(select, customInput) {
+  if (!customInput) return;
+  const isCustom = select.value === CUSTOM_CATEGORY_VALUE;
+  customInput.classList.toggle("is-hidden", !isCustom);
+  customInput.disabled = !isCustom;
+  customInput.required = isCustom;
+  if (!isCustom) customInput.value = "";
+}
+
+function selectedCategory(select, customInput) {
+  const category = select.value === CUSTOM_CATEGORY_VALUE ? customInput.value.trim() : select.value.trim();
+  if (!category) throw new Error("先写一个新的分类名字");
+  return category;
+}
+
+function refreshTaskExpenseCategorySelect(selected = "") {
+  fillCategorySelect(
+    els.taskExpenseCategory,
+    els.taskCustomExpenseCategory,
+    categoryOptionsFor(false),
+    selected,
+    "自己写花费类目"
+  );
+}
+
+function refreshTransactionCategorySelect(selected = "") {
+  fillCategorySelect(
+    els.transactionCategory,
+    els.transactionCustomCategory,
+    categoryOptionsFor(els.transactionType.value === "income"),
+    selected,
+    "自己写喜账类目"
+  );
 }
 
 function normalizeSettings(row = {}) {
@@ -414,6 +496,9 @@ class SupabaseStore {
   }
 
   async signIn(email) {
+    if (window.location.protocol === "file:") {
+      throw new Error("请用正式网页或 localhost 打开小屋，file 本地文件不能发送邮箱入口。");
+    }
     const { error } = await this.client.auth.signInWithOtp({
       email,
       options: {
@@ -554,17 +639,20 @@ async function ensureStore() {
 
 function seedStaticOptions() {
   fillSelect(els.taskPhase, PHASES);
-  fillSelect(els.taskExpenseCategory, EXPENSE_CATEGORIES);
-  fillSelect(els.transactionCategory, INCOME_CATEGORIES);
+  refreshTaskExpenseCategorySelect();
+  refreshTransactionCategorySelect();
   els.taskForm.elements.dueDate.value = todayISO();
   els.transactionForm.elements.date.value = todayISO();
   els.monthlySavingForm.elements.startDate.value = todayISO();
   if (!categoryListenerBound) {
+    els.taskExpenseCategory.addEventListener("change", () => {
+      syncCustomCategoryField(els.taskExpenseCategory, els.taskCustomExpenseCategory);
+    });
     els.transactionType.addEventListener("change", () => {
-      fillSelect(
-        els.transactionCategory,
-        els.transactionType.value === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
-      );
+      refreshTransactionCategorySelect();
+    });
+    els.transactionCategory.addEventListener("change", () => {
+      syncCustomCategoryField(els.transactionCategory, els.transactionCustomCategory);
     });
     categoryListenerBound = true;
   }
@@ -648,9 +736,21 @@ function renderAll() {
   renderSettingsForm();
   renderMetrics();
   renderUpcoming();
+  renderCategorySelects();
   renderTaskSelects();
   renderTaskBoard();
   renderFinance();
+}
+
+function renderCategorySelects() {
+  const currentTaskCategory = els.taskExpenseCategory.value === CUSTOM_CATEGORY_VALUE
+    ? els.taskCustomExpenseCategory.value.trim()
+    : els.taskExpenseCategory.value;
+  const currentTransactionCategory = els.transactionCategory.value === CUSTOM_CATEGORY_VALUE
+    ? els.transactionCustomCategory.value.trim()
+    : els.transactionCategory.value;
+  refreshTaskExpenseCategorySelect(currentTaskCategory);
+  refreshTransactionCategorySelect(currentTransactionCategory);
 }
 
 function renderSettingsForm() {
@@ -944,9 +1044,9 @@ function openTransactionDialog(id) {
     notify("未找到该记录，可能已被删除");
     return;
   }
-  const categoryOptions = (tx.isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)
-    .map((category) => `<option value="${category}" ${category === tx.category ? "selected" : ""}>${category}</option>`)
-    .join("");
+  const categoryOptions = uniqueTextOptions([...categoryOptionsFor(tx.isIncome), tx.category])
+    .map((category) => `<option value="${escapeHtml(category)}" ${category === tx.category ? "selected" : ""}>${escapeHtml(category)}</option>`)
+    .join("") + `<option value="${CUSTOM_CATEGORY_VALUE}">＋自己写一类</option>`;
   const taskOptions = [{ value: "", label: "无" }].concat(
     state.tasks.map((task) => ({ value: task.id, label: task.name }))
   ).map((option) => `<option value="${option.value}" ${option.value === tx.taskId ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("");
@@ -958,7 +1058,7 @@ function openTransactionDialog(id) {
         <label>入袋/花出日<input name="date" type="date" value="${escapeHtml(tx.date)}" required /></label>
         <label>添一笔喜账<select name="type"><option value="income" ${tx.isIncome ? "selected" : ""}>添喜金</option><option value="expense" ${!tx.isIncome ? "selected" : ""}>付喜账</option></select></label>
         <label>多少心意<input name="amount" type="text" inputmode="decimal" value="${tx.amount}" required /></label>
-        <label>放在哪一类<select name="category">${categoryOptions}</select></label>
+        <label>放在哪一类<select name="category">${categoryOptions}</select><input class="custom-category-input is-hidden" name="customCategory" type="text" placeholder="自己写一类，比如婚车、红包、伴手礼..." /></label>
         <label>关联的小事<select name="taskId">${taskOptions}</select></label>
         <label>小备注<input name="remarks" type="text" value="${escapeHtml(tx.remarks)}" /></label>
       </div>
@@ -969,8 +1069,18 @@ function openTransactionDialog(id) {
     </form>
   `;
   const form = els.modalBody.querySelector("#editTransactionForm");
+  const modalCustomCategory = form.elements.customCategory;
   form.elements.type.addEventListener("change", () => {
-    fillSelect(form.elements.category, form.elements.type.value === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES);
+    fillCategorySelect(
+      form.elements.category,
+      modalCustomCategory,
+      categoryOptionsFor(form.elements.type.value === "income"),
+      "",
+      "自己写一类"
+    );
+  });
+  form.elements.category.addEventListener("change", () => {
+    syncCustomCategoryField(form.elements.category, modalCustomCategory);
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -980,7 +1090,7 @@ function openTransactionDialog(id) {
       await store.updateTransaction(id, {
         date: input.date,
         amount: numberValue(input.amount),
-        category: input.category,
+        category: selectedCategory(form.elements.category, modalCustomCategory),
         remarks: input.remarks.trim(),
         isIncome: input.type === "income",
         taskId: input.taskId
@@ -1084,8 +1194,14 @@ els.authForm.addEventListener("submit", async (event) => {
   }
   const done = setBusy(event.submitter, supabaseConfigured ? "发送中" : "进入中");
   try {
-    const activeStore = await ensureStore();
-    const result = await activeStore.signIn(email);
+    const activeStore = await withTimeout(
+      ensureStore(),
+      "云端连接有点慢，请刷新后再试。"
+    );
+    const result = await withTimeout(
+      activeStore.signIn(email),
+      "邮箱入口发送超时，请换正式网址打开后再试。"
+    );
     if (result.sent) {
       els.authModeNote.textContent = "入口链接已发到邮箱啦，点一下就能回来。";
     } else {
@@ -1125,6 +1241,9 @@ els.taskForm.addEventListener("submit", async (event) => {
   const input = readForm(form);
   const plannedAmount = numberValue(input.plannedAmount);
   try {
+    const expenseCategory = input.recordExpense && plannedAmount > 0
+      ? selectedCategory(els.taskExpenseCategory, els.taskCustomExpenseCategory)
+      : "";
     const activeStore = await ensureStore();
     const task = await activeStore.createTask({
       name: input.name.trim(),
@@ -1141,7 +1260,7 @@ els.taskForm.addEventListener("submit", async (event) => {
       const tx = await activeStore.createTransaction({
         date: todayISO(),
         amount: plannedAmount,
-        category: input.expenseCategory,
+        category: expenseCategory,
         remarks: input.name.trim(),
         isIncome: false,
         taskId: task.id
@@ -1170,7 +1289,7 @@ els.transactionForm.addEventListener("submit", async (event) => {
     const tx = await activeStore.createTransaction({
       date: input.date,
       amount: numberValue(input.amount),
-      category: input.category,
+      category: selectedCategory(els.transactionCategory, els.transactionCustomCategory),
       remarks: input.remarks.trim(),
       isIncome: input.type === "income",
       taskId: input.taskId
@@ -1178,7 +1297,7 @@ els.transactionForm.addEventListener("submit", async (event) => {
     state.transactions = sortTransactions([...state.transactions, tx]);
     form.reset();
     els.transactionForm.elements.date.value = todayISO();
-    fillSelect(els.transactionCategory, INCOME_CATEGORIES);
+    refreshTransactionCategorySelect();
     renderAll();
     notify("喜金小库已记好");
   } catch (error) {

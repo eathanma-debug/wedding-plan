@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>MYYYH 的婚礼小屋</title>
-    <link rel="stylesheet" href="./styles.css?v=20260509-story-polish" />
+    <link rel="stylesheet" href="./styles.css?v=20260511-custom-categories" />
   </head>
   <body>
     <noscript>这个页面需要开启 JavaScript。</noscript>
@@ -191,6 +191,7 @@
               <label>
                 花在哪一类
                 <select name="expenseCategory" id="taskExpenseCategory"></select>
+                <input class="custom-category-input is-hidden" name="customExpenseCategory" id="taskCustomExpenseCategory" type="text" placeholder="自己写一类，比如婚车、住宿、司仪..." />
               </label>
               <button class="primary-button" type="submit">添一件小事</button>
             </form>
@@ -227,6 +228,7 @@
               <label>
                 放在哪一类
                 <select name="category" id="transactionCategory"></select>
+                <input class="custom-category-input is-hidden" name="customCategory" id="transactionCustomCategory" type="text" placeholder="自己写一类，比如婚车、红包、伴手礼..." />
               </label>
               <label>
                 关联的小事
@@ -337,6 +339,6 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="./config.js"></script>
-    <script type="module" src="./app.js?v=20260509-story-polish"></script>
+    <script type="module" src="./app.js?v=20260511-custom-categories"></script>
   </body>
 </html>
